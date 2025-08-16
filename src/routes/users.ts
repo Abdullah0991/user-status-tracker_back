@@ -2,7 +2,7 @@
 import express, { NextFunction, Request, Response } from 'express';
 import passport from 'passport';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Status } from '@prisma/client';
 import {
     AuthenticatedRequest,
     CreateUserRequest,
@@ -110,7 +110,7 @@ router.post('/',
             };
 
             if (role === 'USER') {
-                userData.status = 'AVAILABLE_NO_TASK';
+                userData.status = Status.AVAILABLE_NO_TASK;
             }
             // For ADMIN users, status remains null
 
@@ -150,7 +150,7 @@ router.put('/:id',
 
             // Only set status for regular users
             if (role === 'USER') {
-                updateData.status = status || 'AVAILABLE_NO_TASK';
+                updateData.status = status || Status.AVAILABLE_NO_TASK;
             } else if (role === 'ADMIN') {
                 updateData.status = null; // Clear status for admin users
             }

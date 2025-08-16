@@ -2,7 +2,7 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Status } from '@prisma/client';
 import { AuthResponse, LoginRequest, RegisterRequest } from '../types';
 
 const router = express.Router();
@@ -31,7 +31,7 @@ router.post('/register', async (req: Request<{}, AuthResponse, RegisterRequest>,
         };
 
         if (role === 'USER') {
-            userData.status = 'AVAILABLE_NO_TASK';
+            userData.status = Status.AVAILABLE_NO_TASK;
         }
         // For ADMIN users, status remains null
 
