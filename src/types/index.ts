@@ -1,4 +1,5 @@
 // src/types/index.ts
+import { Request } from 'express';
 import { Role, Status } from '@prisma/client';
 
 export interface UserResponse {
@@ -6,7 +7,9 @@ export interface UserResponse {
     email: string;
     name: string;
     role: Role;
-    status: Status;
+    status: Status | null; // Make status nullable
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface AuthResponse {
@@ -41,11 +44,12 @@ export interface UpdateUserRequest {
     name?: string;
     email?: string;
     role?: Role;
-    status?: Status;
+    status?: Status | null; // Allow null for admin users
 }
 
 export interface DashboardStats {
     totalUsers: number;
+    totalRegularUsers: number; // Only count users with status
     stats: {
         [key in Status]?: {
             count: number;

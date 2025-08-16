@@ -22,13 +22,21 @@ router.post('/register', async (req: Request<{}, AuthResponse, RegisterRequest>,
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Set initial status only for regular users, not for admins
+        const userData: any = {
+            email,
+            password: hashedPassword,
+            name,
+            role
+        };
+
+        if (role === 'USER') {
+            userData.status = 'AVAILABLE_NO_TASK';
+        }
+        // For ADMIN users, status remains null
+
         const user = await prisma.user.create({
-            data: {
-                email,
-                password: hashedPassword,
-                name,
-                role
-            }
+            data: userData
         });
 
         const token = jwt.sign(

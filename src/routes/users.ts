@@ -15,9 +15,18 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Middleware to check if user is admin
-const isAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (req.user.role !== 'ADMIN') {
+const isAdmin = (req: Request, res: Response, next: NextFunction): void => {
+    if ((req as AuthenticatedRequest).user.role !== 'ADMIN') {
         res.status(403).json({ message: 'Access denied' });
+        return;
+    }
+    next();
+};
+
+// Middleware to check if user can update status (only regular users)
+const canUpdateStatus = (req: Request, res: Response, next: NextFunction): void => {
+    if ((req as AuthenticatedRequest).user.role === 'ADMIN') {
+        res.status(403).json({ message: 'Admin users cannot set status' });
         return;
     }
     next();
@@ -27,7 +36,7 @@ const isAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction): 
 router.get('/',
     passport.authenticate('jwt', { session: false }),
     isAdmin,
-    async (req: AuthenticatedRequest, res: Response<UserResponse[] | { message: string }>) => {
+    async (req: Request, res: Response<UserResponse[] | { message: string }>) => {
         try {
             const users = await prisma.user.findMany({
                 select: {
@@ -40,7 +49,7 @@ router.get('/',
                     updatedAt: true
                 }
             });
-            res.json(users as UserResponse[]);
+            res.json(users as unknown as UserResponse[]);
         } catch (error) {
             console.error('Get users error:', error);
             res.status(500).json({ message: 'Server error' });
@@ -48,9 +57,10 @@ router.get('/',
     }
 );
 
-// Update user status
+// Update user status (Only for regular users)
 router.put('/status',
     passport.authenticate('jwt', { session: false }),
+    canUpdateStatus,
     async (req: Request<{}, UserResponse, UpdateStatusRequest>, res: Response<UserResponse | { message: string }>) => {
         const authenticatedReq = req as AuthenticatedRequest;
         try {
@@ -84,7 +94,6 @@ router.post('/',
         try {
             const { email, password, name, role } = req.body;
 
-            // Check if user already exists
             const existingUser = await prisma.user.findUnique({ where: { email } });
             if (existingUser) {
                 return res.status(400).json({ message: 'User with this email already exists' });
@@ -92,8 +101,21 @@ router.post('/',
 
             const hashedPassword = await bcrypt.hash(password, 10);
 
+            // Set initial status only for regular users
+            const userData: any = {
+                email,
+                password: hashedPassword,
+                name,
+                role
+            };
+
+            if (role === 'USER') {
+                userData.status = 'AVAILABLE_NO_TASK';
+            }
+            // For ADMIN users, status remains null
+
             const user = await prisma.user.create({
-                data: { email, password: hashedPassword, name, role },
+                data: userData,
                 select: {
                     id: true,
                     email: true,
@@ -105,7 +127,7 @@ router.post('/',
                 }
             });
 
-            res.status(201).json(user as UserResponse);
+            res.status(201).json(user as unknown as UserResponse);
         } catch (error) {
             console.error('Create user error:', error);
             res.status(500).json({ message: 'Server error' });
@@ -124,7 +146,14 @@ router.put('/:id',
             const { id } = req.params;
             const { name, email, role, status, password } = req.body;
 
-            const updateData: any = { name, email, role, status };
+            const updateData: any = { name, email, role };
+
+            // Only set status for regular users
+            if (role === 'USER') {
+                updateData.status = status || 'AVAILABLE_NO_TASK';
+            } else if (role === 'ADMIN') {
+                updateData.status = null; // Clear status for admin users
+            }
 
             // Only update password if provided
             if (password && password.trim()) {
@@ -145,7 +174,7 @@ router.put('/:id',
                 }
             });
 
-            res.json(user as UserResponse);
+            res.json(user as unknown as UserResponse);
         } catch (error) {
             console.error('Update user error:', error);
             if (error instanceof Error && error.message.includes('Record to update not found')) {
