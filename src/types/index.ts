@@ -47,6 +47,20 @@ export interface UpdateUserRequest {
     status?: Status | null; // Allow null for admin users
 }
 
+export interface ChartDataPoint {
+    status: string;
+    count: number;
+    percentage: number;
+    color: string;
+}
+
+export interface AvailabilityDataPoint {
+    name: string;
+    value: number;
+    percentage: number;
+    color: string;
+}
+
 export interface DashboardStats {
     totalUsers: number;
     totalRegularUsers: number; // Only count users with status
@@ -56,6 +70,8 @@ export interface DashboardStats {
             percentage: string;
         };
     };
+    statusDistributionBar: ChartDataPoint[];
+    availabilityDistribution: AvailabilityDataPoint[];
 }
 
 export interface AuthenticatedRequest extends Request {
