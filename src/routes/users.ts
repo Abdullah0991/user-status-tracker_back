@@ -137,6 +137,40 @@ router.get('/',
     }
 );
 
+// Update user status (Only for regular users)
+router.put('/status',
+    passport.authenticate('jwt', { session: false }),
+    canUpdateStatus,
+    async (req: Request, res: Response) => {
+        const authenticatedReq = req as AuthenticatedRequest;
+
+        try {
+            const { status } = req.body;
+
+            if (!status || !Object.values(Status).includes(status)) {
+                return res.status(400).json({ message: 'Valid status is required' });
+            }
+
+            const user = await prisma.user.update({
+                where: { id: authenticatedReq.user.id },
+                data: { status },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    role: true,
+                    status: true
+                }
+            });
+
+            res.json(user);
+        } catch (error) {
+            console.error('Update status error:', error);
+            res.status(500).json({ message: 'Server error' });
+        }
+    }
+);
+
 // Get user by ID
 router.get('/:id',
     passport.authenticate('jwt', { session: false }),
@@ -357,40 +391,6 @@ router.delete('/:id',
             res.json({ message: 'User deleted successfully' });
         } catch (error) {
             console.error('Delete user error:', error);
-            res.status(500).json({ message: 'Server error' });
-        }
-    }
-);
-
-// Update user status (Only for regular users)
-router.put('/status',
-    passport.authenticate('jwt', { session: false }),
-    canUpdateStatus,
-    async (req: Request, res: Response) => {
-        const authenticatedReq = req as AuthenticatedRequest;
-
-        try {
-            const { status } = req.body;
-
-            if (!status || !Object.values(Status).includes(status)) {
-                return res.status(400).json({ message: 'Valid status is required' });
-            }
-
-            const user = await prisma.user.update({
-                where: { id: authenticatedReq.user.id },
-                data: { status },
-                select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    role: true,
-                    status: true
-                }
-            });
-
-            res.json(user);
-        } catch (error) {
-            console.error('Update status error:', error);
             res.status(500).json({ message: 'Server error' });
         }
     }
